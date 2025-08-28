@@ -26,14 +26,18 @@ public class PLController : MonoBehaviour
     private void Start()
     {
         _rigidBody = GetComponent<Rigidbody2D>();
+        _playerAnimator = GetComponent<Animator>();
     }
     private void FixedUpdate()
     {
+        _lastMoove = transform.position;
         Movement();
         GroundChecker();
     }
     private void Update()
     {
+        AnimationSwitcher(transform.position);
+
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded && !_isDashing) 
         {
             _rigidBody.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
@@ -42,6 +46,50 @@ public class PLController : MonoBehaviour
         {
             Dash();
         }
+        _lastMoove = transform.position;
+
+    }
+    private void AnimationSwitcher(Vector2 nowPos)
+    {
+       
+        Vector2 roundedNow = new Vector2(
+            Mathf.Round(nowPos.x * 100f) / 100f,
+            Mathf.Round(nowPos.y * 100f) / 100f
+        );
+        Vector2 roundedLast = new Vector2(
+            Mathf.Round(_lastMoove.x * 100f) / 100f,
+            Mathf.Round(_lastMoove.y * 100f) / 100f
+        );
+
+        if (roundedNow == roundedLast && !_isDashing)
+        {
+            SetState(idle: true);
+        }
+        else if (!_isDashing && roundedNow.y == roundedLast.y)
+        {
+            SetState(moving: true);
+        }
+        else if (roundedNow.y > roundedLast.y)
+        {
+            SetState(jumping: true);
+        }
+        else if (roundedNow.y < roundedLast.y)
+        {
+            SetState(falling: true);
+        }
+        else if (_isDashing)
+        {
+            SetState(dashing: true);
+        }
+    }
+
+    private void SetState(bool idle = false, bool moving = false, bool jumping = false, bool falling = false, bool dashing = false)
+    {
+        _playerAnimator.SetBool("isStaying", idle);
+        _playerAnimator.SetBool("isMooving", moving);
+        _playerAnimator.SetBool("isJumping", jumping);
+        _playerAnimator.SetBool("isFalling", falling);
+        _playerAnimator.SetBool("isDashing", dashing);
     }
     private void Movement()
     {
@@ -118,11 +166,12 @@ public class PLController : MonoBehaviour
     private IEnumerator Dashing(bool lookRight)
     {
         _isDashing = true;
+        transform.localScale  = Vector2.one;
         _dashInCooldown = true;
         float rbGravity = _rigidBody.gravityScale;
         _rigidBody.gravityScale = 0;
         int direction = lookRight ? 1 : -1;
-
+        _playerAnimator.SetFloat("DashDirection", direction);
         _rigidBody.velocity = new Vector2(direction * _dashPower, 0f);
         Debug.Log(_rigidBody.velocity);
         yield return new WaitForSeconds(0.1f);
@@ -130,6 +179,7 @@ public class PLController : MonoBehaviour
         yield return new WaitForSeconds(0.4f);
         _rigidBody.gravityScale = rbGravity;
         _isDashing = false;
+        _playerAnimator.SetFloat("DashDirection", 0f);
         yield return new WaitForSeconds(1.5f);
         _dashInCooldown = false;
     }

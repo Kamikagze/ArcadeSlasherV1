@@ -20,6 +20,9 @@ public class PLController : MonoBehaviour
     private Vector2 _lastMoove = Vector2.zero;
     private bool _lookRight = true;
 
+
+    // Animator
+    private Animator _playerAnimator;
     private void Start()
     {
         _rigidBody = GetComponent<Rigidbody2D>();
